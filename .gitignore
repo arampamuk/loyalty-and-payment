@@ -1,0 +1,11 @@
+node_modules/
+lerna-debug.log
+npm-debug.log
+packages/*/lib
+.idea
+.DS_Store
+.vscode/
+node_modules/
+dist/
+**/tsbuildinfo
+**/*.tsbuildinfo

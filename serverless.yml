@@ -1,0 +1,71 @@
+service: payment-service
+
+frameworkVersion: "3"
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  apiGateway:
+    minimumCompressionSize: 1024
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    JWT_SECRET: "your-256-bit-secret"
+    AWS_ID: "your-aws-id"
+  tracing: true
+
+functions:
+  LegacyPaymentService:
+    name: legacy-payment-service-${sls:stage}
+    handler: packages/legacy-payment-service/dist/index.handler
+    events:
+      - httpApi:
+          method: POST
+          path: /monolith/api/charge-payment
+    environment:
+      region: ${aws:region}
+    package:
+      individually: true
+      patterns:
+        - "!./**"
+        - "./packages/legacy-payment-service/dist/**"
+        - ./packages/legacy-payment-service/node_modules/**
+        - ./packages/legacy-payment-service/package.json
+
+  LoyaltyPaymentService:
+    name: loyalty-payment-service-${sls:stage}
+    handler: packages/loyalty-payment-service/dist/index.handler
+    events:
+      - http:
+          path: /api/v2/charge-payment
+          method: post
+          cors: true
+          authorizer:
+            name: JWTAuthorization
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 3600 # cache the result for 1 hour
+    environment:
+      region: ${aws:region}
+    package:
+      individually: true
+      patterns:
+        - "!./**"
+        - "./packages/loyalty-payment-service/dist/**"
+        - ./packages/loyalty-payment-service/node_modules/**
+        - ./packages/loyalty-payment-service/package.json
+
+  # should I rename as JWTAuthorizer ?????
+  JWTAuthorization:
+    name: jwt-authorization-${sls:stage}
+    handler: packages/jwt-authorization/dist/index.handler
+    environment:
+      region: ${aws:region}
+    package:
+      individually: true
+      patterns:
+        - "!./**"
+        - "./packages/jwt-authorization/dist/**"
+        - ./packages/jwt-authorization/node_modules/**
+        - ./packages/jwt-authorization/package.json
